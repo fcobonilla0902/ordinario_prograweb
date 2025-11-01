@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi App con Facebook Login</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 600px; 
+            margin: 50px auto; 
+            padding: 20px; 
+        }
+        .user-info { 
+            display: none; 
+            margin-top: 20px; 
+            padding: 15px; 
+            border: 1px solid #ddd; 
+            border-radius: 5px; 
+        }
+        .fb-login-button { margin-top: 20px; }
+        .logout-btn { 
+            background: #dc3545; 
+            color: white; 
+            border: none; 
+            padding: 8px 16px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            margin-top: 10px; 
+        }
+    </style>
+</head>
+<body>
+    <h1>Mi App con Facebook Login</h1>
+    
+    <div id="login-section">
+        <p>Inicia sesión con Facebook para continuar:</p>
+        <div class="fb-login-button" 
+             data-width="" 
+             data-size="large" 
+             data-button-type="continue_with" 
+             data-layout="default" 
+             data-auto-logout-link="false"
+             data-use-continue-as="true"
+             scope="public_profile"
+             onlogin="checkLoginState();">
+        </div>
+    </div>
+
+    <div id="user-info" class="user-info">
+        <h3>¡Bienvenido! ✅</h3>
+        <img id="user-photo" src="" alt="Foto de perfil" style="border-radius: 50%; width: 100px; height: 100px;">
+        <p><strong>Nombre:</strong> <span id="user-name"></span></p>
+        <p><strong>ID:</strong> <span id="user-id"></span></p>
+        <p><em>Email no disponible en modo desarrollo</em></p>
+        <button class="logout-btn" onclick="logoutFB()">Cerrar sesión</button>
+    </div>
+
+    <!-- Facebook SDK -->
+    <script>
+        window.fbAsyncInit = function() {
+            FB.init({
+                appId: '1345810250333428', // ← REEMPLAZA CON TU APP ID REAL
+                cookie: true,
+                xfbml: true,
+                version: 'v18.0'
+            });
+
+            console.log('Facebook SDK inicializado');
+            
+            // Verificar estado inmediatamente
+            checkLoginState();
+        };
+
+        function checkLoginState() {
+            FB.getLoginStatus(function(response) {
+                console.log('Estado de login:', response);
+                if (response.status === 'connected') {
+                    console.log('Usuario CONECTADO');
+                    getUserInfo();
+                } else {
+                    console.log('Usuario NO conectado');
+                    document.getElementById('login-section').style.display = 'block';
+                    document.getElementById('user-info').style.display = 'none';
+                }
+            });
+        }
+
+        function getUserInfo() {
+            FB.api('/me', { fields: 'name,picture' }, function(response) {
+                console.log('Datos recibidos:', response);
+                
+                if (response && !response.error) {
+                    document.getElementById('user-name').textContent = response.name;
+                    document.getElementById('user-id').textContent = response.id;
+                    document.getElementById('user-photo').src = response.picture.data.url;
+                    
+                    document.getElementById('login-section').style.display = 'none';
+                    document.getElementById('user-info').style.display = 'block';
+                    
+                    console.log('Información mostrada correctamente');
+                }
+            });
+        }
+
+        function logoutFB() {
+            FB.logout(function(response) {
+                console.log('Sesión cerrada');
+                document.getElementById('login-section').style.display = 'block';
+                document.getElementById('user-info').style.display = 'none';
+            });
+        }
+
+        // Cargar SDK
+        (function(d, s, id) {
+            var js, fjs = d.getElementsByTagName(s)[0];
+            if (d.getElementById(id)) return;
+            js = d.createElement(s); js.id = id;
+            js.src = "https://connect.facebook.net/es_LA/sdk.js";
+            fjs.parentNode.insertBefore(js, fjs);
+        }(document, 'script', 'facebook-jssdk'));
+    </script>
+</body>
+</html>
