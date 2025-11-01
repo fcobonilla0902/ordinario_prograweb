@@ -3,165 +3,121 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mi App con Facebook Login</title>
+    <title>App con Facebook Graph API</title>
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            max-width: 800px; 
-            margin: 50px auto; 
-            padding: 20px; 
-        }
-        .user-info, .posts-info { 
-            display: none; 
-            margin-top: 20px; 
-            padding: 15px; 
-            border: 1px solid #ddd; 
-            border-radius: 5px; 
-        }
-        .fb-login-button { margin-top: 20px; }
-        .logout-btn { 
-            background: #dc3545; 
-            color: white; 
-            border: none; 
-            padding: 8px 16px; 
-            border-radius: 4px; 
-            cursor: pointer; 
-            margin-top: 10px; 
-        }
-        .post { 
-            border-bottom: 1px solid #eee; 
-            padding: 10px 0; 
-            margin: 10px 0; 
-        }
-        .load-posts-btn {
-            background: #28a745;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin: 10px 0;
-        }
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        .user-info, .posts-info { display: none; margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .post { border-bottom: 1px solid #eee; padding: 10px 0; margin: 10px 0; }
+        .action-btn { background: #1877F2; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
     </style>
 </head>
 <body>
-    <h1>Mi App con Facebook Login</h1>
+    <h1>App con Facebook Graph API</h1>
     
     <div id="login-section">
-        <p>Inicia sesión con Facebook para continuar:</p>
-        <div class="fb-login-button" 
-             data-width="" 
-             data-size="large" 
-             data-button-type="continue_with" 
-             data-layout="default" 
-             data-auto-logout-link="false"
-             data-use-continue-as="true"
-             scope="public_profile,user_posts">
-        </div>
+        <p>Inicia sesión con Facebook:</p>
+        <div class="fb-login-button" data-size="large" scope="public_profile,user_posts"></div>
     </div>
 
     <div id="user-info" class="user-info">
         <h3>¡Bienvenido!</h3>
-        <img id="user-photo" src="" alt="Foto de perfil" style="border-radius: 50%; width: 100px; height: 100px;">
+        <img id="user-photo" src="" style="border-radius: 50%; width: 80px; height: 80px;">
         <p><strong>Nombre:</strong> <span id="user-name"></span></p>
-        <p><strong>ID:</strong> <span id="user-id"></span></p>
-        <p><em>Email no disponible en modo desarrollo</em></p>
         
-        <button class="load-posts-btn" onclick="getUserPosts()">Cargar mis posts</button>
-        <button class="logout-btn" onclick="logoutFB()">Cerrar sesión</button>
+        <button class="action-btn" onclick="getLatestPosts()">📝 Ver mis últimos posts</button>
+        <button class="action-btn" onclick="showCommentDemo()">💬 Demo: Comentar desde la app</button>
     </div>
 
     <div id="posts-info" class="posts-info">
-        <h4>Mis últimos posts:</h4>
+        <h4>📖 Mis últimos posts:</h4>
         <div id="posts-container"></div>
     </div>
 
-    <!-- Facebook SDK -->
     <script>
         window.fbAsyncInit = function() {
             FB.init({
-                appId: '1345810250333428', 
+                appId: '1345810250333428',
                 cookie: true,
                 xfbml: true,
                 version: 'v18.0'
             });
-
-            console.log('Facebook SDK inicializado');
-            
-            // Verificar estado inmediatamente
             checkLoginState();
         };
 
         function checkLoginState() {
             FB.getLoginStatus(function(response) {
-                console.log('Estado de login:', response);
                 if (response.status === 'connected') {
-                    console.log('Usuario CONECTADO');
                     getUserInfo();
-                } else {
-                    console.log('Usuario NO conectado');
-                    document.getElementById('login-section').style.display = 'block';
-                    document.getElementById('user-info').style.display = 'none';
-                    document.getElementById('posts-info').style.display = 'none';
                 }
             });
         }
 
         function getUserInfo() {
             FB.api('/me', { fields: 'name,picture' }, function(response) {
-                console.log('Datos recibidos:', response);
-                
-                if (response && !response.error) {
-                    document.getElementById('user-name').textContent = response.name;
-                    document.getElementById('user-id').textContent = response.id;
-                    document.getElementById('user-photo').src = response.picture.data.url;
-                    
-                    document.getElementById('login-section').style.display = 'none';
-                    document.getElementById('user-info').style.display = 'block';
-                    
-                    console.log('Información mostrada correctamente');
-                }
+                document.getElementById('user-name').textContent = response.name;
+                document.getElementById('user-photo').src = response.picture.data.url;
+                document.getElementById('login-section').style.display = 'none';
+                document.getElementById('user-info').style.display = 'block';
             });
         }
 
-        // 🔥 NUEVA FUNCIÓN: OBTENER POSTS CON GRAPH API
-        function getUserPosts() {
+        // 🔥 MOSTRAR ÚLTIMOS POSTS (Graph API)
+        function getLatestPosts() {
             FB.api('/me/posts', { fields: 'message,created_time,id', limit: 5 }, function(response) {
-                console.log('Posts recibidos:', response);
-                
-                const postsContainer = document.getElementById('posts-container');
-                postsContainer.innerHTML = '';
+                const container = document.getElementById('posts-container');
+                container.innerHTML = '';
                 
                 if (response.data && response.data.length > 0) {
                     response.data.forEach(post => {
                         const postElement = document.createElement('div');
                         postElement.className = 'post';
                         postElement.innerHTML = `
-                            <p><strong>${new Date(post.created_time).toLocaleDateString()}:</strong></p>
+                            <p><strong>${new Date(post.created_time).toLocaleString()}:</strong></p>
                             <p>${post.message || '(Post sin texto)'}</p>
-                            <small>ID: ${post.id}</small>
+                            <button onclick="commentOnPost('${post.id}')">💬 Comentar en este post</button>
+                            <hr>
                         `;
-                        postsContainer.appendChild(postElement);
+                        container.appendChild(postElement);
                     });
-                    
-                    document.getElementById('posts-info').style.display = 'block';
                 } else {
-                    postsContainer.innerHTML = '<p>No se encontraron posts o no tienes permisos.</p>';
-                    document.getElementById('posts-info').style.display = 'block';
+                    container.innerHTML = '<p>No se encontraron posts. El permiso user_posts requiere revisión de Facebook.</p>';
                 }
+                document.getElementById('posts-info').style.display = 'block';
             });
         }
 
-        function logoutFB() {
-            FB.logout(function(response) {
-                console.log('Sesión cerrada');
-                document.getElementById('login-section').style.display = 'block';
-                document.getElementById('user-info').style.display = 'none';
-                document.getElementById('posts-info').style.display = 'none';
-            });
+        // 🔥 PERMITIR COMENTAR DESDE TU APP
+        function commentOnPost(postId) {
+            const commentText = prompt('Escribe tu comentario:');
+            if (commentText) {
+                FB.api(`/${postId}/comments`, 'post', { message: commentText }, function(response) {
+                    if (!response || response.error) {
+                        alert('❌ No se pudo comentar. Se necesita permiso publish_actions.');
+                    } else {
+                        alert('✅ ¡Comentario publicado!');
+                    }
+                });
+            }
         }
 
-        // Cargar SDK
+        // 🔥 DEMO: CÓMO COMENTAR DESDE LA APP
+        function showCommentDemo() {
+            const container = document.getElementById('posts-container');
+            container.innerHTML = `
+                <div class="post">
+                    <h4>💬 Demo: Comentar desde la App</h4>
+                    <p>Para comentar en posts desde tu app necesitas:</p>
+                    <ul>
+                        <li>Permiso: <strong>publish_actions</strong></li>
+                        <li>Revisión de Facebook</li>
+                        <li>Demo funcional implementado en el código</li>
+                    </ul>
+                    <button onclick="commentOnPost('demo_post')">Probar función de comentar</button>
+                </div>
+            `;
+            document.getElementById('posts-info').style.display = 'block';
+        }
+
         (function(d, s, id) {
             var js, fjs = d.getElementsByTagName(s)[0];
             if (d.getElementById(id)) return;
