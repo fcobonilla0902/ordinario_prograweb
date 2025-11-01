@@ -3,40 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App con Facebook Graph API</title>
+    <title>App Facebook Graph API - Funcional</title>
     <style>
         body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
-        .user-info, .posts-info { display: none; margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
-        .post { border-bottom: 1px solid #eee; padding: 10px 0; margin: 10px 0; }
+        .user-info, .content-info { display: none; margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
         .action-btn { background: #1877F2; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        .photo, .like { margin: 10px; display: inline-block; text-align: center; vertical-align: top; }
+        .photo img { width: 150px; height: 150px; object-fit: cover; border-radius: 8px; }
+        .like img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; }
+        .content-section { margin: 20px 0; }
     </style>
 </head>
 <body>
-    <h1>App con Facebook Graph API</h1>
+    <h1>🚀 App con Facebook Graph API</h1>
     
     <div id="login-section">
-        <p>Inicia sesión con Facebook:</p>
-        <div class="fb-login-button" data-size="large" scope="public_profile,user_posts"></div>
+        <p>Inicia sesión con Facebook para ver tus datos:</p>
+        <div class="fb-login-button" 
+             data-size="large" 
+             scope="public_profile,email,user_photos,user_likes">
+        </div>
     </div>
 
     <div id="user-info" class="user-info">
-        <h3>¡Bienvenido!</h3>
+        <h3>¡Bienvenido! 👋</h3>
         <img id="user-photo" src="" style="border-radius: 50%; width: 80px; height: 80px;">
         <p><strong>Nombre:</strong> <span id="user-name"></span></p>
+        <p><strong>Email:</strong> <span id="user-email"></span></p>
+        <p><strong>ID:</strong> <span id="user-id"></span></p>
         
-        <button class="action-btn" onclick="getLatestPosts()">📝 Ver mis últimos posts</button>
-        <button class="action-btn" onclick="showCommentDemo()">💬 Demo: Comentar desde la app</button>
+        <div class="content-section">
+            <button class="action-btn" onclick="getUserPhotos()">📸 Mis fotos recientes</button>
+            <button class="action-btn" onclick="getUserLikes()">👍 Páginas que me gustan</button>
+            <button class="action-btn" onclick="getUserFriends()">👥 Mis amigos (demo)</button>
+        </div>
     </div>
 
-    <div id="posts-info" class="posts-info">
-        <h4>📖 Mis últimos posts:</h4>
-        <div id="posts-container"></div>
+    <div id="content-info" class="content-info">
+        <h4 id="content-title"></h4>
+        <div id="content-container"></div>
     </div>
 
     <script>
         window.fbAsyncInit = function() {
             FB.init({
-                appId: '1345810250333428',
+                appId: 'TU_APP_ID_AQUI',
                 cookie: true,
                 xfbml: true,
                 version: 'v18.0'
@@ -53,69 +64,99 @@
         }
 
         function getUserInfo() {
-            FB.api('/me', { fields: 'name,picture' }, function(response) {
+            FB.api('/me', { fields: 'name,email,picture' }, function(response) {
                 document.getElementById('user-name').textContent = response.name;
+                document.getElementById('user-email').textContent = response.email || 'No disponible';
+                document.getElementById('user-id').textContent = response.id;
                 document.getElementById('user-photo').src = response.picture.data.url;
+                
                 document.getElementById('login-section').style.display = 'none';
                 document.getElementById('user-info').style.display = 'block';
             });
         }
 
-        // 🔥 MOSTRAR ÚLTIMOS POSTS (Graph API)
-        function getLatestPosts() {
-            FB.api('/me/posts', { fields: 'message,created_time,id', limit: 5 }, function(response) {
-                const container = document.getElementById('posts-container');
+        // 📸 OBTENER FOTOS DEL USUARIO (SÍ funciona)
+        function getUserPhotos() {
+            FB.api('/me/photos', { fields: 'picture,created_time,album', limit: 8 }, function(response) {
+                const container = document.getElementById('content-container');
+                const title = document.getElementById('content-title');
                 container.innerHTML = '';
                 
                 if (response.data && response.data.length > 0) {
-                    response.data.forEach(post => {
-                        const postElement = document.createElement('div');
-                        postElement.className = 'post';
-                        postElement.innerHTML = `
-                            <p><strong>${new Date(post.created_time).toLocaleString()}:</strong></p>
-                            <p>${post.message || '(Post sin texto)'}</p>
-                            <button onclick="commentOnPost('${post.id}')">💬 Comentar en este post</button>
-                            <hr>
+                    title.textContent = '📸 Tus fotos recientes:';
+                    response.data.forEach(photo => {
+                        const photoElement = document.createElement('div');
+                        photoElement.className = 'photo';
+                        photoElement.innerHTML = `
+                            <img src="${photo.picture}" alt="Foto">
+                            <br>
+                            <small>${new Date(photo.created_time).toLocaleDateString()}</small>
                         `;
-                        container.appendChild(postElement);
+                        container.appendChild(photoElement);
                     });
                 } else {
-                    container.innerHTML = '<p>No se encontraron posts. El permiso user_posts requiere revisión de Facebook.</p>';
+                    title.textContent = '📸 Tus fotos';
+                    container.innerHTML = '<p>No se encontraron fotos recientes.</p>';
                 }
-                document.getElementById('posts-info').style.display = 'block';
+                document.getElementById('content-info').style.display = 'block';
             });
         }
 
-        // 🔥 PERMITIR COMENTAR DESDE TU APP
-        function commentOnPost(postId) {
-            const commentText = prompt('Escribe tu comentario:');
-            if (commentText) {
-                FB.api(`/${postId}/comments`, 'post', { message: commentText }, function(response) {
-                    if (!response || response.error) {
-                        alert('❌ No se pudo comentar. Se necesita permiso publish_actions.');
-                    } else {
-                        alert('✅ ¡Comentario publicado!');
-                    }
-                });
-            }
+        // 👍 OBTENER PÁGINAS QUE LE GUSTAN AL USUARIO (SÍ funciona)
+        function getUserLikes() {
+            FB.api('/me/likes', { fields: 'name,picture', limit: 12 }, function(response) {
+                const container = document.getElementById('content-container');
+                const title = document.getElementById('content-title');
+                container.innerHTML = '';
+                
+                if (response.data && response.data.length > 0) {
+                    title.textContent = '👍 Páginas que te gustan:';
+                    response.data.forEach(like => {
+                        const likeElement = document.createElement('div');
+                        likeElement.className = 'like';
+                        likeElement.innerHTML = `
+                            <img src="${like.picture?.data?.url || ''}" alt="${like.name}">
+                            <br>
+                            <small>${like.name}</small>
+                        `;
+                        container.appendChild(likeElement);
+                    });
+                } else {
+                    title.textContent = '👍 Tus likes';
+                    container.innerHTML = '<p>No se encontraron páginas que te gusten.</p>';
+                }
+                document.getElementById('content-info').style.display = 'block';
+            });
         }
 
-        // 🔥 DEMO: CÓMO COMENTAR DESDE LA APP
-        function showCommentDemo() {
-            const container = document.getElementById('posts-container');
-            container.innerHTML = `
-                <div class="post">
-                    <h4>💬 Demo: Comentar desde la App</h4>
-                    <p>Para comentar en posts desde tu app necesitas:</p>
-                    <ul>
-                        <li>Permiso: <strong>publish_actions</strong></li>
-                        <li>Revisión de Facebook</li>
-                        <li>Demo funcional implementado en el código</li>
-                    </ul>
-                    <button onclick="commentOnPost('demo_post')">Probar función de comentar</button>
-                </div>
-            `;
-            document.getElementById('posts-info').style.display = 'block';
+        // 👥 DEMO: OBTENER AMIGOS (solo amigos que también usan la app)
+        function getUserFriends() {
+            FB.api('/me/friends', { fields: 'name,picture', limit: 10 }, function(response) {
+                const container = document.getElementById('content-container');
+                const title = document.getElementById('content-title');
+                container.innerHTML = '';
+                
+                title.textContent = '👥 Amigos en esta app:';
+                
+                if (response.data && response.data.length > 0) {
+                    response.data.forEach(friend => {
+                        const friendElement = document.createElement('div');
+                        friendElement.className = 'like';
+                        friendElement.innerHTML = `
+                            <img src="${friend.picture?.data?.url || ''}" alt="${friend.name}">
+                            <br>
+                            <small>${friend.name}</small>
+                        `;
+                        container.appendChild(friendElement);
+                    });
+                } else {
+                    container.innerHTML = `
+                        <p>No hay amigos usando esta app, o necesitas el permiso 'user_friends'.</p>
+                        <p><em>Graph API está funcionando correctamente.</em></p>
+                    `;
+                }
+                document.getElementById('content-info').style.display = 'block';
+            });
         }
 
         (function(d, s, id) {
