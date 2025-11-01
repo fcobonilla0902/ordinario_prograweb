@@ -7,11 +7,11 @@
     <style>
         body { 
             font-family: Arial, sans-serif; 
-            max-width: 600px; 
+            max-width: 800px; 
             margin: 50px auto; 
             padding: 20px; 
         }
-        .user-info { 
+        .user-info, .posts-info { 
             display: none; 
             margin-top: 20px; 
             padding: 15px; 
@@ -28,6 +28,20 @@
             cursor: pointer; 
             margin-top: 10px; 
         }
+        .post { 
+            border-bottom: 1px solid #eee; 
+            padding: 10px 0; 
+            margin: 10px 0; 
+        }
+        .load-posts-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body>
@@ -42,25 +56,31 @@
              data-layout="default" 
              data-auto-logout-link="false"
              data-use-continue-as="true"
-             scope="public_profile"
-             onlogin="checkLoginState();">
+             scope="public_profile,user_posts">
         </div>
     </div>
 
     <div id="user-info" class="user-info">
-        <h3>¡Bienvenido! ✅</h3>
+        <h3>¡Bienvenido!</h3>
         <img id="user-photo" src="" alt="Foto de perfil" style="border-radius: 50%; width: 100px; height: 100px;">
         <p><strong>Nombre:</strong> <span id="user-name"></span></p>
         <p><strong>ID:</strong> <span id="user-id"></span></p>
         <p><em>Email no disponible en modo desarrollo</em></p>
+        
+        <button class="load-posts-btn" onclick="getUserPosts()">Cargar mis posts</button>
         <button class="logout-btn" onclick="logoutFB()">Cerrar sesión</button>
+    </div>
+
+    <div id="posts-info" class="posts-info">
+        <h4>📖 Mis últimos posts:</h4>
+        <div id="posts-container"></div>
     </div>
 
     <!-- Facebook SDK -->
     <script>
         window.fbAsyncInit = function() {
             FB.init({
-                appId: '1345810250333428', // ← REEMPLAZA CON TU APP ID REAL
+                appId: '1345810250333428', 
                 cookie: true,
                 xfbml: true,
                 version: 'v18.0'
@@ -82,6 +102,7 @@
                     console.log('Usuario NO conectado');
                     document.getElementById('login-section').style.display = 'block';
                     document.getElementById('user-info').style.display = 'none';
+                    document.getElementById('posts-info').style.display = 'none';
                 }
             });
         }
@@ -103,11 +124,40 @@
             });
         }
 
+        // 🔥 NUEVA FUNCIÓN: OBTENER POSTS CON GRAPH API
+        function getUserPosts() {
+            FB.api('/me/posts', { fields: 'message,created_time,id', limit: 5 }, function(response) {
+                console.log('Posts recibidos:', response);
+                
+                const postsContainer = document.getElementById('posts-container');
+                postsContainer.innerHTML = '';
+                
+                if (response.data && response.data.length > 0) {
+                    response.data.forEach(post => {
+                        const postElement = document.createElement('div');
+                        postElement.className = 'post';
+                        postElement.innerHTML = `
+                            <p><strong>${new Date(post.created_time).toLocaleDateString()}:</strong></p>
+                            <p>${post.message || '(Post sin texto)'}</p>
+                            <small>ID: ${post.id}</small>
+                        `;
+                        postsContainer.appendChild(postElement);
+                    });
+                    
+                    document.getElementById('posts-info').style.display = 'block';
+                } else {
+                    postsContainer.innerHTML = '<p>No se encontraron posts o no tienes permisos.</p>';
+                    document.getElementById('posts-info').style.display = 'block';
+                }
+            });
+        }
+
         function logoutFB() {
             FB.logout(function(response) {
                 console.log('Sesión cerrada');
                 document.getElementById('login-section').style.display = 'block';
                 document.getElementById('user-info').style.display = 'none';
+                document.getElementById('posts-info').style.display = 'none';
             });
         }
 
