@@ -10,7 +10,8 @@
         .action-btn { background: #1877F2; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
         .data-item { margin: 10px 0; padding: 10px; border: 1px solid #eee; border-radius: 5px; }
         .success { color: green; font-weight: bold; }
-        .like-item { display: inline-block; margin: 10px; text-align: center; vertical-align: top; width: 120px; }
+        .photo-item, .like-item { display: inline-block; margin: 10px; text-align: center; vertical-align: top; width: 120px; }
+        .photo-item img { width: 100px; height: 100px; object-fit: cover; border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -20,7 +21,7 @@
         <p>Inicia sesión con Facebook para ver tus datos:</p>
         <div class="fb-login-button" 
              data-size="large" 
-             scope="public_profile,email,user_likes,user_age_range,user_gender">
+             scope="public_profile,email,user_photos,user_likes,user_age_range,user_gender">
         </div>
     </div>
 
@@ -29,11 +30,12 @@
         <img id="user-photo" src="" style="border-radius: 50%; width: 80px; height: 80px;">
         <p><strong>Nombre:</strong> <span id="user-name"></span></p>
         <p><strong>Email:</strong> <span id="user-email"></span></p>
+        <p><strong>ID:</strong> <span id="user-id"></span></p>
         
         <div style="margin: 20px 0;">
+            <button class="action-btn" onclick="getUserPhotos()">📸 Mis fotos recientes</button>
             <button class="action-btn" onclick="getUserLikes()">👍 Mis páginas favoritas</button>
-            <button class="action-btn" onclick="getUserProfile()">👤 Mi información</button>
-            <button class="action-btn" onclick="testAllEndpoints()">🔍 Probar Graph API</button>
+            <button class="action-btn" onclick="getUserProfile()">👤 Mi información completa</button>
         </div>
     </div>
 
@@ -62,9 +64,10 @@
         }
 
         function getUserInfo() {
-            FB.api('/me', { fields: 'name,email,picture' }, function(response) {
+            FB.api('/me', { fields: 'name,email,picture,link' }, function(response) {
                 document.getElementById('user-name').textContent = response.name;
-                document.getElementById('user-email').textContent = response.email || 'No disponible';
+                document.getElementById('user-email').textContent = response.email || 'No disponible (requiere revisión)';
+                document.getElementById('user-id').textContent = response.id;
                 document.getElementById('user-photo').src = response.picture.data.url;
                 
                 document.getElementById('login-section').style.display = 'none';
@@ -72,9 +75,42 @@
             });
         }
 
+        // 📸 FOTOS RECIENTES DEL USUARIO
+        function getUserPhotos() {
+            FB.api('/me/photos', { fields: 'picture,created_time,album{name}', limit: 9 }, function(response) {
+                const container = document.getElementById('content-container');
+                const title = document.getElementById('content-title');
+                container.innerHTML = '';
+                
+                if (response.data && response.data.length > 0) {
+                    title.textContent = `📸 Tus fotos recientes (${response.data.length}):`;
+                    response.data.forEach(photo => {
+                        const photoElement = document.createElement('div');
+                        photoElement.className = 'photo-item';
+                        photoElement.innerHTML = `
+                            <img src="${photo.picture}" alt="Foto">
+                            <br>
+                            <small>${new Date(photo.created_time).toLocaleDateString()}</small>
+                            ${photo.album ? `<br><small>Álbum: ${photo.album.name}</small>` : ''}
+                        `;
+                        container.appendChild(photoElement);
+                    });
+                } else {
+                    title.textContent = '📸 Tus fotos';
+                    container.innerHTML = `
+                        <div class="data-item">
+                            <p>No se encontraron fotos recientes.</p>
+                            <p><em>Graph API está funcionando correctamente.</em></p>
+                        </div>
+                    `;
+                }
+                document.getElementById('content-info').style.display = 'block';
+            });
+        }
+
         // 👍 PÁGINAS QUE TE GUSTAN
         function getUserLikes() {
-            FB.api('/me/likes', { fields: 'name,category,picture', limit: 12 }, function(response) {
+            FB.api('/me/likes', { fields: 'name,category,picture{url}', limit: 12 }, function(response) {
                 const container = document.getElementById('content-container');
                 const title = document.getElementById('content-title');
                 container.innerHTML = '';
@@ -100,6 +136,7 @@
                         <div class="data-item">
                             <p>No se encontraron páginas que te gusten.</p>
                             <p><em>Graph API está funcionando, pero no tienes páginas públicas con "Me gusta".</em></p>
+                            <p><strong>Para probar:</strong> Ve a Facebook y da "Me gusta" a algunas páginas públicas.</p>
                         </div>
                     `;
                 }
@@ -107,7 +144,7 @@
             });
         }
 
-        // 👤 INFORMACIÓN DEL PERFIL
+        // 👤 INFORMACIÓN COMPLETA DEL PERFIL
         function getUserProfile() {
             FB.api('/me', { fields: 'name,first_name,last_name,age_range,gender,link' }, function(response) {
                 const container = document.getElementById('content-container');
@@ -115,6 +152,11 @@
                 container.innerHTML = '';
                 
                 title.textContent = '👤 Tu información de Facebook:';
+                
+                // Construir enlace seguro al perfil
+                const profileLink = response.link ? 
+                    `<a href="https://facebook.com/${response.id}" target="_blank">https://facebook.com/${response.id}</a>` : 
+                    'No disponible';
                 
                 const infoElement = document.createElement('div');
                 infoElement.className = 'data-item';
@@ -124,51 +166,14 @@
                     <p><strong>Apellido:</strong> ${response.last_name}</p>
                     <p><strong>Género:</strong> ${response.gender || 'No disponible'}</p>
                     <p><strong>Rango de edad:</strong> ${response.age_range?.min ? response.age_range.min + '+' : 'No disponible'}</p>
-                    <p><strong>Perfil público:</strong> <a href="${response.link}" target="_blank">Ver en Facebook</a></p>
-                    <p class="success">✅ Graph API funcionando correctamente</p>
+                    <p><strong>Perfil público:</strong> ${profileLink}</p>
+                    <p class="success">✅ Facebook Graph API funcionando correctamente</p>
+                    <p><em>Permisos implementados: public_profile, email, user_photos, user_likes</em></p>
                 `;
                 container.appendChild(infoElement);
                 
                 document.getElementById('content-info').style.display = 'block';
             });
-        }
-
-        // 🔍 PROBAR MÚLTIPLES ENDPOINTS
-        function testAllEndpoints() {
-            const container = document.getElementById('content-container');
-            const title = document.getElementById('content-title');
-            container.innerHTML = '';
-            
-            title.textContent = '🔍 Graph API - Pruebas de endpoints:';
-            
-            // Probar diferentes endpoints
-            const tests = [
-                { name: 'Perfil básico', api: '/me', fields: 'name,id' },
-                { name: 'Páginas que me gustan', api: '/me/likes', fields: 'name', limit: 3 },
-                { name: 'Información demográfica', api: '/me', fields: 'age_range,gender' }
-            ];
-            
-            tests.forEach(test => {
-                FB.api(test.api, { fields: test.fields, limit: test.limit }, function(response) {
-                    const element = document.createElement('div');
-                    element.className = 'data-item';
-                    
-                    if (response && !response.error) {
-                        element.innerHTML = `
-                            <p class="success">✅ ${test.name} - FUNCIONANDO</p>
-                            <small>Datos: ${JSON.stringify(response).substring(0, 150)}...</small>
-                        `;
-                    } else {
-                        element.innerHTML = `
-                            <p>❌ ${test.name} - Error</p>
-                            <small>${response.error?.message || 'Permiso requerido'}</small>
-                        `;
-                    }
-                    container.appendChild(element);
-                });
-            });
-            
-            document.getElementById('content-info').style.display = 'block';
         }
 
         (function(d, s, id) {
