@@ -8,9 +8,9 @@
         body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
         .user-info, .content-info { display: none; margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
         .action-btn { background: #1877F2; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
-        .data-item { margin: 10px; padding: 10px; border: 1px solid #eee; border-radius: 5px; }
-        .success { color: green; }
-        .info { color: blue; }
+        .data-item { margin: 10px 0; padding: 10px; border: 1px solid #eee; border-radius: 5px; }
+        .success { color: green; font-weight: bold; }
+        .like-item { display: inline-block; margin: 10px; text-align: center; vertical-align: top; width: 120px; }
     </style>
 </head>
 <body>
@@ -20,7 +20,7 @@
         <p>Inicia sesión con Facebook para ver tus datos:</p>
         <div class="fb-login-button" 
              data-size="large" 
-             scope="public_profile,email,user_likes">
+             scope="public_profile,email,user_likes,user_age_range,user_gender">
         </div>
     </div>
 
@@ -29,12 +29,11 @@
         <img id="user-photo" src="" style="border-radius: 50%; width: 80px; height: 80px;">
         <p><strong>Nombre:</strong> <span id="user-name"></span></p>
         <p><strong>Email:</strong> <span id="user-email"></span></p>
-        <p><strong>ID:</strong> <span id="user-id"></span></p>
         
         <div style="margin: 20px 0;">
-            <button class="action-btn" onclick="getUserLikes()">👍 Páginas que me gustan</button>
-            <button class="action-btn" onclick="getUserProfileInfo()">👤 Info detallada del perfil</button>
-            <button class="action-btn" onclick="testGraphAPI()">🔧 Probar Graph API</button>
+            <button class="action-btn" onclick="getUserLikes()">👍 Mis páginas favoritas</button>
+            <button class="action-btn" onclick="getUserProfile()">👤 Mi información</button>
+            <button class="action-btn" onclick="testAllEndpoints()">🔍 Probar Graph API</button>
         </div>
     </div>
 
@@ -66,7 +65,6 @@
             FB.api('/me', { fields: 'name,email,picture' }, function(response) {
                 document.getElementById('user-name').textContent = response.name;
                 document.getElementById('user-email').textContent = response.email || 'No disponible';
-                document.getElementById('user-id').textContent = response.id;
                 document.getElementById('user-photo').src = response.picture.data.url;
                 
                 document.getElementById('login-section').style.display = 'none';
@@ -74,85 +72,96 @@
             });
         }
 
-        // 👍 OBTENER PÁGINAS QUE LE GUSTAN AL USUARIO (SÍ funciona sin revisión)
+        // 👍 PÁGINAS QUE TE GUSTAN
         function getUserLikes() {
-            FB.api('/me/likes', { fields: 'name,category', limit: 10 }, function(response) {
+            FB.api('/me/likes', { fields: 'name,category,picture', limit: 12 }, function(response) {
                 const container = document.getElementById('content-container');
                 const title = document.getElementById('content-title');
                 container.innerHTML = '';
                 
                 if (response.data && response.data.length > 0) {
-                    title.textContent = '👍 Páginas que te gustan:';
+                    title.textContent = `👍 Te gustan ${response.data.length} páginas:`;
                     response.data.forEach(like => {
                         const likeElement = document.createElement('div');
-                        likeElement.className = 'data-item';
+                        likeElement.className = 'like-item';
                         likeElement.innerHTML = `
-                            <strong>${like.name}</strong>
-                            <br><small>Categoría: ${like.category}</small>
+                            <div style="width: 60px; height: 60px; background: #f0f0f0; border-radius: 8px; margin: 0 auto 5px; display: flex; align-items: center; justify-content: center;">
+                                ${like.picture ? `<img src="${like.picture.data.url}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">` : '📄'}
+                            </div>
+                            <strong style="font-size: 12px;">${like.name}</strong>
+                            <br>
+                            <small style="color: #666;">${like.category}</small>
                         `;
                         container.appendChild(likeElement);
                     });
                 } else {
-                    title.textContent = '👍 Tus likes';
-                    container.innerHTML = '<p>No se encontraron páginas que te gusten.</p>';
+                    title.textContent = '👍 Tus páginas favoritas';
+                    container.innerHTML = `
+                        <div class="data-item">
+                            <p>No se encontraron páginas que te gusten.</p>
+                            <p><em>Graph API está funcionando, pero no tienes páginas públicas con "Me gusta".</em></p>
+                        </div>
+                    `;
                 }
                 document.getElementById('content-info').style.display = 'block';
             });
         }
 
-        // 👤 INFORMACIÓN DETALLADA DEL PERFIL (SÍ funciona)
-        function getUserProfileInfo() {
-            FB.api('/me', { fields: 'name,first_name,last_name,age_range,link' }, function(response) {
+        // 👤 INFORMACIÓN DEL PERFIL
+        function getUserProfile() {
+            FB.api('/me', { fields: 'name,first_name,last_name,age_range,gender,link' }, function(response) {
                 const container = document.getElementById('content-container');
                 const title = document.getElementById('content-title');
                 container.innerHTML = '';
                 
-                title.textContent = '👤 Información de tu perfil:';
+                title.textContent = '👤 Tu información de Facebook:';
                 
-                const profileElement = document.createElement('div');
-                profileElement.className = 'data-item';
-                profileElement.innerHTML = `
+                const infoElement = document.createElement('div');
+                infoElement.className = 'data-item';
+                infoElement.innerHTML = `
                     <p><strong>Nombre completo:</strong> ${response.name}</p>
                     <p><strong>Primer nombre:</strong> ${response.first_name}</p>
                     <p><strong>Apellido:</strong> ${response.last_name}</p>
-                    <p><strong>Rango de edad:</strong> ${response.age_range?.min || 'No disponible'}+</p>
-                    <p><strong>Enlace al perfil:</strong> <a href="${response.link}" target="_blank">Ver perfil</a></p>
+                    <p><strong>Género:</strong> ${response.gender || 'No disponible'}</p>
+                    <p><strong>Rango de edad:</strong> ${response.age_range?.min ? response.age_range.min + '+' : 'No disponible'}</p>
+                    <p><strong>Perfil público:</strong> <a href="${response.link}" target="_blank">Ver en Facebook</a></p>
+                    <p class="success">✅ Graph API funcionando correctamente</p>
                 `;
-                container.appendChild(profileElement);
+                container.appendChild(infoElement);
                 
                 document.getElementById('content-info').style.display = 'block';
             });
         }
 
-        // 🔧 PROBAR DIFERENTES LLAMADAS A GRAPH API
-        function testGraphAPI() {
+        // 🔍 PROBAR MÚLTIPLES ENDPOINTS
+        function testAllEndpoints() {
             const container = document.getElementById('content-container');
             const title = document.getElementById('content-title');
             container.innerHTML = '';
             
-            title.textContent = '🔧 Graph API - Llamadas disponibles:';
+            title.textContent = '🔍 Graph API - Pruebas de endpoints:';
             
             // Probar diferentes endpoints
-            const endpoints = [
-                { name: 'Perfil básico', endpoint: '/me', fields: 'name,id' },
-                { name: 'Foto de perfil', endpoint: '/me', fields: 'picture.width(200).height(200)' },
-                { name: 'Páginas que me gustan', endpoint: '/me/likes', fields: 'name', limit: 5 }
+            const tests = [
+                { name: 'Perfil básico', api: '/me', fields: 'name,id' },
+                { name: 'Páginas que me gustan', api: '/me/likes', fields: 'name', limit: 3 },
+                { name: 'Información demográfica', api: '/me', fields: 'age_range,gender' }
             ];
             
-            endpoints.forEach(item => {
-                FB.api(item.endpoint, { fields: item.fields, limit: item.limit }, function(response) {
+            tests.forEach(test => {
+                FB.api(test.api, { fields: test.fields, limit: test.limit }, function(response) {
                     const element = document.createElement('div');
                     element.className = 'data-item';
                     
                     if (response && !response.error) {
                         element.innerHTML = `
-                            <p class="success">✅ ${item.name} - FUNCIONA</p>
-                            <small>Respuesta: ${JSON.stringify(response).substring(0, 100)}...</small>
+                            <p class="success">✅ ${test.name} - FUNCIONANDO</p>
+                            <small>Datos: ${JSON.stringify(response).substring(0, 150)}...</small>
                         `;
                     } else {
                         element.innerHTML = `
-                            <p class="info">ℹ️ ${item.name} - Requiere permisos adicionales</p>
-                            <small>Error: ${response.error?.message || 'Permiso requerido'}</small>
+                            <p>❌ ${test.name} - Error</p>
+                            <small>${response.error?.message || 'Permiso requerido'}</small>
                         `;
                     }
                     container.appendChild(element);
