@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App Facebook Graph API - Funcional</title>
+    <title>App Facebook Graph API</title>
     <style>
         body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
         .user-info, .content-info { display: none; margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
@@ -14,10 +14,11 @@
         .photo-item { display: inline-block; margin: 10px; text-align: center; vertical-align: top; width: 120px; }
         .photo-item img { width: 100px; height: 100px; object-fit: cover; border-radius: 8px; }
         .post-item { margin: 15px 0; padding: 15px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; }
+        .error { color: #d32f2f; background: #ffebee; padding: 10px; border-radius: 4px; }
     </style>
 </head>
 <body>
-    <h1>🚀 App con Facebook Graph API</h1>
+    <h1>App con Facebook Graph API</h1>
     
     <div id="login-section">
         <p>Inicia sesión con Facebook para ver tus datos:</p>
@@ -28,15 +29,15 @@
     </div>
 
     <div id="user-info" class="user-info">
-        <h3>¡Bienvenido! 👋</h3>
+        <h3>Bienvenido</h3>
         <img id="user-photo" src="" style="border-radius: 50%; width: 80px; height: 80px;">
         <p><strong>Nombre:</strong> <span id="user-name"></span></p>
         <p><strong>ID:</strong> <span id="user-id"></span></p>
         
         <div style="margin: 20px 0;">
-            <button class="action-btn" onclick="getUserPhotos()">📸 Mis fotos recientes</button>
-            <button class="action-btn" onclick="getUserPosts()">📝 Mis publicaciones</button>
-            <button class="action-btn" onclick="showProfileInfo()">👤 Mi información</button>
+            <button class="action-btn" onclick="getUserPhotos()">Mis fotos recientes</button>
+            <button class="action-btn" onclick="getUserPosts()">Mis publicaciones</button>
+            <button class="action-btn" onclick="showProfileInfo()">Mi informacion</button>
         </div>
     </div>
 
@@ -75,7 +76,6 @@
             });
         }
 
-        // 📸 FOTOS RECIENTES DEL USUARIO (SÍ funciona)
         function getUserPhotos() {
             FB.api('/me/photos', { fields: 'picture,created_time,album{name}', limit: 8 }, function(response) {
                 const container = document.getElementById('content-container');
@@ -83,7 +83,7 @@
                 container.innerHTML = '';
                 
                 if (response.data && response.data.length > 0) {
-                    title.textContent = `📸 Tus fotos recientes (${response.data.length}):`;
+                    title.textContent = `Tus fotos recientes (${response.data.length}):`;
                     response.data.forEach(photo => {
                         const photoElement = document.createElement('div');
                         photoElement.className = 'photo-item';
@@ -95,11 +95,11 @@
                         container.appendChild(photoElement);
                     });
                 } else {
-                    title.textContent = '📸 Tus fotos';
+                    title.textContent = 'Tus fotos';
                     container.innerHTML = `
                         <div class="data-item">
                             <p>No se encontraron fotos recientes.</p>
-                            <p class="info">Graph API está funcionando correctamente.</p>
+                            <p class="info">Graph API esta funcionando correctamente.</p>
                         </div>
                     `;
                 }
@@ -107,7 +107,6 @@
             });
         }
 
-        // 📝 INTENTAR OBTENER PUBLICACIONES (aunque requiera revisión)
         function getUserPosts() {
             FB.api('/me/posts', { fields: 'message,created_time,story,id', limit: 10 }, function(response) {
                 const container = document.getElementById('content-container');
@@ -115,12 +114,12 @@
                 container.innerHTML = '';
                 
                 if (response.data && response.data.length > 0) {
-                    title.textContent = `📝 Tus publicaciones recientes (${response.data.length}):`;
+                    title.textContent = `Tus publicaciones recientes (${response.data.length}):`;
                     response.data.forEach(post => {
                         const postElement = document.createElement('div');
                         postElement.className = 'post-item';
                         
-                        const postContent = post.message || post.story || '(Publicación sin texto)';
+                        const postContent = post.message || post.story || '(Publicacion sin texto)';
                         const postDate = new Date(post.created_time).toLocaleString();
                         
                         postElement.innerHTML = `
@@ -131,16 +130,16 @@
                         container.appendChild(postElement);
                     });
                 } else {
-                    title.textContent = '📝 Tus publicaciones';
+                    title.textContent = 'Tus publicaciones';
                     container.innerHTML = `
-                        <div class="data-item">
-                            <p>No se pudieron cargar las publicaciones.</p>
-                            <p class="info">El permiso 'user_posts' requiere revisión de Facebook.</p>
-                            <p class="success">✅ Graph API está implementado correctamente.</p>
+                        <div class="data-item error">
+                            <p><strong>No se tienen los permisos necesarios</strong></p>
+                            <p>El permiso 'user_posts' requiere revision de Facebook.</p>
+                            <p>Graph API esta implementado correctamente pero falta la autorizacion de Facebook.</p>
                             <ul>
-                                <li>Endpoint usado: <code>/me/posts</code></li>
-                                <li>Permiso requerido: <code>user_posts</code></li>
-                                <li>Estado: Esperando revisión de Facebook</li>
+                                <li>Endpoint usado: /me/posts</li>
+                                <li>Permiso requerido: user_posts</li>
+                                <li>Estado: Esperando revision de Facebook</li>
                             </ul>
                         </div>
                     `;
@@ -149,14 +148,13 @@
             });
         }
 
-        // 👤 INFORMACIÓN DEL PERFIL (SÍ funciona)
         function showProfileInfo() {
             FB.api('/me', { fields: 'name,first_name,last_name,age_range,gender' }, function(response) {
                 const container = document.getElementById('content-container');
                 const title = document.getElementById('content-title');
                 container.innerHTML = '';
                 
-                title.textContent = '👤 Tu información de Facebook:';
+                title.textContent = 'Tu informacion de Facebook:';
                 
                 const infoElement = document.createElement('div');
                 infoElement.className = 'data-item';
@@ -164,18 +162,18 @@
                     <p><strong>Nombre completo:</strong> ${response.name}</p>
                     <p><strong>Primer nombre:</strong> ${response.first_name}</p>
                     <p><strong>Apellido:</strong> ${response.last_name}</p>
-                    <p><strong>Género:</strong> ${response.gender || 'No disponible'}</p>
+                    <p><strong>Genero:</strong> ${response.gender || 'No disponible'}</p>
                     <p><strong>Rango de edad:</strong> ${response.age_range?.min ? response.age_range.min + '+' : 'No disponible'}</p>
-                    <p class="info">ℹ️ Email no disponible - requiere revisión de permisos</p>
-                    <p class="success">✅ Facebook Graph API funcionando correctamente</p>
+                    <p class="info">Email no disponible - requiere revision de permisos</p>
+                    <p class="success">Facebook Graph API funcionando correctamente</p>
                     <hr>
-                    <h4>📊 Resumen técnico:</h4>
+                    <h4>Resumen tecnico:</h4>
                     <ul>
-                        <li>✅ Facebook Login implementado</li>
-                        <li>✅ Graph API integrado</li>
-                        <li>✅ App en producción (Render)</li>
-                        <li>✅ Permisos básicos funcionando</li>
-                        <li>⏳ Permisos avanzados en revisión</li>
+                        <li>Facebook Login implementado</li>
+                        <li>Graph API integrado</li>
+                        <li>App en produccion (Render)</li>
+                        <li>Permisos basicos funcionando</li>
+                        <li>Permisos avanzados en revision</li>
                     </ul>
                 `;
                 container.appendChild(infoElement);
