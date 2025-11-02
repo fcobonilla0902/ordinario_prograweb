@@ -18,6 +18,6 @@ app.get('/health', (req, res) => {
 
 // Iniciar servidor
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
-  console.log(`📱 Accede en: http://localhost:${PORT}`);
+  console.log(`Servidor corriendo en puerto ${PORT}`);
+  console.log(`Accede en: http://localhost:${PORT}`);
 });
